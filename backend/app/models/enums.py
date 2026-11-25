@@ -1,0 +1,25 @@
+from enum import Enum
+
+
+class Role(str, Enum):
+    USER = "USER"
+    AGENT = "AGENT"
+    ADMIN = "ADMIN"
+
+
+class TicketCategory(str, Enum):
+    ACCOUNT_LOGIN = "ACCOUNT_LOGIN"
+    FUNCTION_ERROR = "FUNCTION_ERROR"
+    PERFORMANCE = "PERFORMANCE"
+    USAGE_CONSULTATION = "USAGE_CONSULTATION"
+    FEATURE_SUGGESTION = "FEATURE_SUGGESTION"
+
+
+class TicketStatus(str, Enum):
+    PENDING_ASSIGNMENT = "PENDING_ASSIGNMENT"
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
+    REOPENED = "REOPENED"
+
