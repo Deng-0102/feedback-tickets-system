@@ -22,6 +22,7 @@ from app.models.ticket import Ticket, TicketRecord
 from app.models.user import User
 from app.schemas.analysis import AnalysisSuggestion, AnalysisView
 from app.services.analysis_config import AnalysisSettings
+from app.services.analysis_events import emit_post_analysis
 from app.services.analysis_prompts import (
     CATEGORY_GUIDE,
     PROMPT_VERSION,
@@ -458,7 +459,10 @@ def analyse_ticket(
     )
     db.commit()
     db.refresh(result)
-    return result_view(result, cached=False, applied=apply)
+    view = result_view(result, cached=False, applied=apply)
+    # 扩展点：4 号相似检索、6 号看板刷新、消息通知等在这里注册回调，不修改本函数
+    emit_post_analysis(db, ticket, view)
+    return view
 
 
 def preview_suggestion(

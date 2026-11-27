@@ -16,6 +16,7 @@ from app.main import app
 from app.models.analysis import AnalysisResult
 from app.models.ticket import TicketRecord
 from app.services.analysis_config import get_analysis_settings
+from app.services.analysis_events import clear_post_analysis_hooks, register_post_analysis_hook
 from app.services.llm_client import LLMCallError
 
 DESCRIPTION = "修改密码后一直无法登录，重新安装也没有解决，着急使用。"
@@ -215,6 +216,34 @@ def test_second_request_reuses_cached_result(client):
     assert second.status_code == 200
     assert second.json()["data"]["cached"] is True
     assert model.calls == 1
+
+
+def test_post_analysis_hook_runs_and_failure_is_isolated(client):
+    """扩展点：回调能拿到整理结果；回调抛异常不影响接口返回与落库。"""
+
+    headers = sign_in(client)
+    ticket_id = create_ticket(client, headers)
+    seen: list[str] = []
+
+    def collect(db, ticket, view):
+        seen.append(view.title)
+
+    def broken(db, ticket, view):
+        raise RuntimeError("similarity service down")
+
+    register_post_analysis_hook(collect)
+    register_post_analysis_hook(broken)
+    try:
+        response = analyse(client, FakeModel(json.dumps(SUCCESS_PAYLOAD, ensure_ascii=False)), ticket_id, headers)
+    finally:
+        clear_post_analysis_hooks()
+
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "SUCCESS"
+    assert seen == ["修改密码后无法登录"]
+
+    ticket = client.get(f"/api/v1/tickets/{ticket_id}", headers=headers).json()["data"]
+    assert ticket["category"] == "ACCOUNT_LOGIN"
 
 
 def test_analysis_disabled_returns_503(client, monkeypatch):
